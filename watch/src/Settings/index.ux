@@ -1,0 +1,86 @@
+<template>
+  <div class="page">
+    <div class="header"><text class="back" onclick="back">返回</text><text class="title">{{name}}的小屋</text></div>
+    <text class="status">{{status}}</text>
+    <qrcode class="qr" if="{{editorUrl}}" value="{{editorUrl}}" />
+    <text class="hint" if="{{editorUrl}}">手机扫码换形象、名字和场景</text>
+    <text class="hint" else>先设置配套服务地址，再创建手机配对。</text>
+    <div class="row"><input class="button" type="button" value="服务地址" onclick="address" /><input class="button" type="button" value="{{editorUrl ? '显示配对码' : '创建配对'}}" onclick="pair" /></div>
+    <input class="sync" type="button" value="{{busy ? '同步中，请保持亮屏' : '同步手机修改'}}" onclick="manualSync" />
+    <div class="row"><text class="small" onclick="restorePrevious">恢复上次形象</text><text class="small" onclick="restoreBuiltin">内置形象</text></div>
+  </div>
+</template>
+<script>
+import router from '@system.router'
+import fetch from '@system.fetch'
+import request from '@system.request'
+import file from '@system.file'
+import prompt from '@system.prompt'
+const sync=require('../lib/sync')
+export default {
+  private:{name:'小伴',editorUrl:'',status:'正在读取设置…',busy:false},
+  onInit(){this.alive=true;this.visible=true;this.$app.$def.whenReady(()=>{if(this.alive){this.refresh();this.startPolling()}})},
+  onShow(){this.visible=true;if(this.$app.$def.ready){this.refresh();this.startPolling()}},
+  onHide(){this.visible=false;if(this.pollTimer)clearInterval(this.pollTimer)},
+  onDestroy(){this.alive=false;if(this.pollTimer)clearInterval(this.pollTimer)},
+  startPolling(){if(this.pollTimer)clearInterval(this.pollTimer);this.pollTimer=setInterval(()=>{if(this.alive && this.visible && !this.busy && this.$app.$def.sync.id)this.syncNow(true)},7000)},
+  manualSync(){this.syncNow(false)},
+  onBackPress(){if(this.busy){prompt.showToast({message:'正在同步，请稍候'});return true}return false},
+  refresh(){
+    const app=this.$app.$def;this.name=app.profile().name
+    this.editorUrl=app.sync.id && app.sync.editorToken?app.sync.baseUrl+'/#id='+app.sync.id+'&key='+app.sync.editorToken:''
+    this.status=app.sync.baseUrl?'手机保存后，点“同步手机修改”。':'尚未设置配套服务地址'
+  },
+  address(){if(!this.busy)router.push({uri:'/ServiceAddress'})},
+  async pair(){
+    if(this.busy)return
+    const app=this.$app.$def
+    if(app.sync.id && app.sync.editorToken){this.refresh();return}
+    let base;try{base=sync.normalizeBase(app.sync.baseUrl)}catch(e){this.status='先设置 HTTPS 服务地址，局域网测试可用 HTTP。';return}
+    this.busy=true;this.status='正在连接配套服务…'
+    try{
+      const data=await sync.requestJson(fetch,base+'/api/pairs','',{})
+      if(!/^[a-f0-9]{16}$/.test(data.id) || !/^[a-f0-9]{48}$/.test(data.deviceToken) || !/^[a-f0-9]{48}$/.test(data.editorToken))throw new Error('invalid_response')
+      app.sync={baseUrl:base,id:data.id,deviceToken:data.deviceToken,editorToken:data.editorToken}
+      await new Promise((resolve,reject)=>app.save(ok=>ok?resolve():reject(new Error('save_failed'))))
+      if(this.alive){this.refresh();this.status='用手机扫码打开个人配置页。请保存此二维码。'}
+    }catch(e){if(this.alive)this.status='连接未完成，请检查服务地址、手机联网和代理。'}
+    this.busy=false
+  },
+  async syncNow(automatic){
+    if(this.busy)return
+    this.busy=true;if(!automatic)this.status='正在读取手机修改…'
+    try{
+      const changed=await sync.syncProfile({fetch,request,file},this.$app.$def,(index,total)=>{if(this.alive)this.status='下载素材 '+index+'/'+total})
+      if(this.alive && (changed || !automatic)){this.refresh();this.status=changed?'同步完成，返回小屋看看吧。':'已经是最新配置。'}
+    }catch(e){
+      if(this.alive && !automatic)this.status=e.message==='not_published'?'请先在手机页面保存配置。':e.message==='pair_first'?'请先创建配对，并用手机扫码。':'同步未完成，原形象和养成存档仍保留。'
+    }
+    this.busy=false
+  },
+  restorePrevious(){
+    const app=this.$app.$def;if(this.busy)return
+    if(!app.previousProfile){this.status='还没有上一份形象。';return}
+    const old=app.customProfile;app.customProfile=app.previousProfile;app.previousProfile=old;app.save();this.refresh();this.status='已恢复上次形象。'
+  },
+  restoreBuiltin(){
+    if(this.busy)return;const app=this.$app.$def
+    if(app.customProfile)app.previousProfile=app.customProfile
+    app.customProfile=null;app.save();this.refresh();this.status='已切回内置形象，养成数值保留。'
+  },
+  back(){if(!this.busy)router.back()}
+}
+</script>
+<style>
+.page {width:100%;height:100%;padding:42px 28px 18px;background-color:#142331;flex-direction:column;align-items:center;}
+.header {width:100%;height:40px;align-items:center;}
+.back {width:78px;height:40px;font-size:22px;color:#c8ded0;}
+.title {font-size:24px;color:#fff4dd;max-lines:1;}
+.status {width:100%;height:48px;margin-top:6px;font-size:18px;color:#d7e1de;max-lines:2;text-align:center;}
+.qr {width:168px;height:168px;color:#000000;background-color:#ffffff;}
+.hint {height:26px;font-size:17px;color:#c0d0c9;margin:5px 0px;max-lines:1;text-align:center;}
+.row {width:100%;justify-content:space-between;height:44px;margin-top:5px;}
+.button {width:178px;height:44px;background-color:#2c4446;color:#fff4dd;font-size:21px;border-radius:12px;}
+.sync {width:100%;height:48px;margin-top:6px;background-color:#d4e8cb;color:#172e2e;font-size:22px;border-radius:12px;}
+.small {font-size:18px;color:#c8ded0;width:176px;height:42px;text-align:center;}
+</style>

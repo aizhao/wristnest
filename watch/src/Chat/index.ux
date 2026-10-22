@@ -1,0 +1,111 @@
+<template>
+  <div class="page">
+    <div class="header"><text class="back" onclick="back">返回</text><text class="title">和{{name}}聊天</text></div>
+    <text class="status">{{status}}</text>
+    <list class="messages" id="messages">
+      <list-item class="message-row" type="message" for="{{messages}}" style="height:{{$item.rowHeight}}px;"><div class="message" style="height:{{$item.cardHeight}}px;"><text class="speaker">{{$item.role === 'user' ? nickname : name}}</text><text class="content" style="height:{{$item.textHeight}}px;">{{$item.content}}</text></div></list-item>
+    </list>
+    <div class="phrases"><text class="chip" onclick="tired">有点累</text><text class="chip" onclick="miss">想你了</text><text class="chip" onclick="night">晚安</text></div>
+    <div class="composer"><text class="draft" onclick="write">{{draft || '写一句话…'}}</text><input class="send" type="button" value="{{busy ? '等待' : '发送'}}" onclick="sendDraft" /></div>
+    <text class="clear" onclick="clearHistory">清除本机聊天记录</text>
+  </div>
+</template>
+<script>
+import router from '@system.router'
+import fetch from '@system.fetch'
+const config = require('../config')
+const pet = require('../lib/pet')
+const chat = require('../lib/chat')
+const layout = require('../lib/chat-layout')
+export default {
+  private: {messages:[], draft:'', busy:false, name:'',nickname:'',status:'正在读取聊天记录…'},
+  onInit() {
+    this.alive = true
+    this.visible = true
+    this.requestId = 0
+    this.$app.$def.whenReady(() => { if (this.alive) this.refresh() })
+  },
+  onShow() { this.visible=true;if(this.$app.$def.ready) this.refresh() },
+  onHide() { this.visible=false;this.cancelPending() },
+  onDestroy() { this.alive=false; this.cancelPending() },
+  cancelPending() { this.requestId += 1; this.busy=false; if(this.requestTimer) clearTimeout(this.requestTimer);if(this.scrollTimer)clearTimeout(this.scrollTimer) },
+  showMessages(history) {
+    this.messages=layout.messageRows(history)
+    if(this.scrollTimer)clearTimeout(this.scrollTimer)
+    const index=this.messages.length-1
+    // 等数据绑定与原生列表布局完成后再定位，避免滚动到尚未生成的行。
+    this.scrollTimer=setTimeout(()=>{
+      this.scrollTimer=null
+      if(!this.alive || !this.visible || index<0)return
+      try{this.$element('messages').scrollTo({index,behavior:'instant'})}catch(e){}
+    },120)
+  },
+  refresh() {
+    const app=this.$app.$def,profile=app.profile()
+    this.name=profile.name;this.nickname=profile.nickname
+    this.draft = app.draft || ''
+    this.status = chat.connection(app,config) ? '准备好啦，'+this.nickname+'想说什么？' : '请先在设置中填写配套服务地址并创建配对。'
+    this.showMessages(app.history.length?app.history:[{role:'assistant',content:this.nickname+'，今天过得怎么样？'}])
+  },
+  write() { if(!this.busy) router.push({uri:'/Keyboard'}) },
+  tired() { this.sendText('今天有点累') }, miss() { this.sendText('想你了') }, night() { this.sendText('晚安') },
+  sendDraft() { this.sendText(this.draft) },
+  sendText(input) {
+    const text = String(input || '').trim().slice(0,160)
+    if(!text || this.busy || !this.$app.$def.ready) return
+    this.draft=text; this.$app.$def.draft=text
+    const connection=chat.connection(this.$app.$def,config)
+    if(!connection) { this.status='请到设置填写配套服务地址并创建配对，聊天会自动使用该连接。'; return }
+    this.busy=true; this.status=this.name+'正在想怎么回复…'
+    const id = ++this.requestId
+    const app = this.$app.$def
+    this.showMessages(app.history.concat([{role:'user',content:text}]))
+    const finishError = line => {
+      if(!this.alive || id!==this.requestId) return
+      clearTimeout(this.requestTimer); this.busy=false; this.status=line
+      this.requestId += 1
+    }
+    this.requestTimer=setTimeout(() => finishError('连接超时了，稍后点发送重试。'),config.timeoutMs)
+    try {
+      fetch.fetch({
+        url:connection.url, method:'POST', responseType:'json',
+        header:{'Content-Type':'application/json','Authorization':'Bearer '+connection.token},
+        data:JSON.stringify({text, history:app.history, pet:app.state,character:{name:this.name,nickname:this.nickname}}),
+        success: response => {
+          if(!this.alive || id!==this.requestId) return
+          let data=response.data
+          try { if(typeof data==='string')data=JSON.parse(data) } catch(e) { finishError('服务返回格式有误，请检查服务配置。');return }
+          if(response.code!==200 || !data || typeof data.text!=='string' || !data.text.trim()) {
+            finishError(chat.errorMessage(response.code,data && data.error)); return
+          }
+          clearTimeout(this.requestTimer); this.busy=false
+          app.history=pet.appendTurn(app.history,text,data.text)
+          app.draft=''; this.draft=''; this.showMessages(app.history)
+          this.status=this.name+'回复了'; app.save()
+        },
+        fail: () => finishError('网络连接失败。检查手机连接后再试，离线陪伴仍然可用。')
+      })
+    } catch(e) { finishError('当前固件未能发起网络请求，请先用离线陪伴。') }
+  },
+  clearHistory() { if(this.busy)return; this.$app.$def.history=[]; this.$app.$def.save(); this.refresh(); this.status='本机聊天记录已清除' },
+  back() { router.back() }
+}
+</script>
+<style>
+.page { width:100%;height:100%;padding:42px 22px 22px;background-color:#10151f;flex-direction:column; }
+.header { width:388px;height:42px;padding:0px 12px;align-items:center;flex-shrink:0; }
+.back { width:76px;height:42px;font-size:22px;color:#accffc; }
+.title { flex:1;font-size:26px;color:#f4f5f8;max-lines:1; }
+.status { width:388px;height:44px;font-size:18px;line-height:22px;color:#b5c4d8;margin-top:4px;margin-bottom:8px;lines:2;flex-shrink:0; }
+.messages { width:388px;height:196px;flex-shrink:0; }
+.message-row { width:388px;height:116px; }
+.message { width:388px;height:108px;background-color:#202a39;border-radius:14px;padding:10px 14px;margin-bottom:8px;flex-direction:column; }
+.speaker { width:360px;height:22px;line-height:22px;font-size:18px;color:#accffc;margin-bottom:6px;flex-shrink:0; }
+.content { width:360px;height:60px;line-height:30px;color:#f4f5f8;font-size:23px;lines:-1;flex-shrink:0; }
+.phrases { width:388px;height:54px;justify-content:space-between;margin-top:8px;flex-shrink:0; }
+.chip { color:#f4f5f8;background-color:#26354a;font-size:22px;width:122px;height:50px;text-align:center;border-radius:12px; }
+.composer { width:388px;height:58px;margin-top:8px;justify-content:space-between;flex-shrink:0; }
+.draft { color:#f4f5f8;background-color:#202a39;width:288px;height:56px;border-radius:12px;font-size:22px;padding:8px;max-lines:1; }
+.send { width:88px;height:56px;background-color:#accffc;color:#102035;font-size:22px;border-radius:12px; }
+.clear { width:388px;font-size:17px;color:#b5c4d8;height:24px;text-align:center;margin-top:4px;flex-shrink:0; }
+</style>

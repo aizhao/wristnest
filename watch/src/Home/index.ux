@@ -1,0 +1,94 @@
+<template>
+  <stack class="page">
+    <image class="scene" src="{{scene}}" onerror="sceneError" />
+    <div class="shade"></div>
+    <div class="ui">
+      <div class="stats">
+        <div class="stat" onclick="foodInfo"><image class="stat-icon" src="/Common/icons/food.png" /><text class="value">{{food}}</text></div>
+        <div class="stat" onclick="moodInfo"><image class="stat-icon" src="/Common/icons/mood.png" /><text class="value">{{mood}}</text></div>
+        <div class="stat" onclick="affinityInfo"><image class="stat-icon" src="/Common/icons/heart.png" /><text class="value">{{affinity}}</text></div>
+      </div>
+      <text class="bubble">{{line}}</text>
+      <div class="stage" onclick="petHead"><image class="pet" src="{{sprite}}" onerror="spriteError" /></div>
+      <text class="error" if="{{saveError}}">存档尚未成功，请稍后再试。</text>
+      <div class="toolbar">
+        <div class="minor" onclick="settings"><image class="minor-icon" src="/Common/icons/settings.png" /></div>
+        <div class="action" onclick="petHead"><image class="action-icon" src="/Common/icons/pet.png" /></div>
+        <div class="action" onclick="feed"><image class="action-icon" src="/Common/icons/feed.png" /></div>
+        <div class="action" onclick="play"><image class="action-icon" src="/Common/icons/play.png" /></div>
+        <div class="minor" onclick="openChat"><image class="minor-icon" src="/Common/icons/chat.png" /></div>
+      </div>
+    </div>
+  </stack>
+</template>
+<script>
+import router from '@system.router'
+import prompt from '@system.prompt'
+const pet=require('../lib/pet')
+const profiles=require('../lib/profile')
+const builtin=require('../profile.json')
+export default {
+  private:{line:'正在读取存档…',sprite:builtin.animations.idle[0],scene:builtin.scene,food:65,mood:72,affinity:0,saveError:false},
+  onInit() {
+    this.alive=true;this.visible=true
+    this.$app.$def.whenReady(()=>{
+      if(!this.alive)return
+      this.refresh();this.line=profiles.personalize('{nickname}，你来啦！今天也要陪着我哦。',this.currentProfile)
+      if(this.visible)this.animate('idle')
+    })
+  },
+  onShow(){this.visible=true;if(this.$app.$def.ready){this.refresh();this.animate('idle')}},
+  onHide(){this.visible=false;this.stopAnimation();this.$app.$def.save()},
+  onDestroy(){this.alive=false;this.stopAnimation()},
+  refresh(){
+    const app=this.$app.$def
+    app.state=pet.advance(app.state,Date.now());this.currentProfile=app.profile()
+    this.scene=this.currentProfile.scene;this.sprite=this.currentProfile.animations.idle[0]
+    this.food=Math.round(app.state.food);this.mood=Math.round(app.state.mood);this.affinity=Math.round(app.state.affinity);this.saveError=app.saveError
+  },
+  stopAnimation(){if(this.frameTimer)clearInterval(this.frameTimer);this.frameTimer=null},
+  animate(name){
+    this.stopAnimation();if(!this.visible || !this.currentProfile)return
+    const frames=this.currentProfile.animations[name] || this.currentProfile.animations.idle
+    let frame=0;const start=Date.now();this.sprite=frames[0]
+    if(frames.length===1)return
+    this.frameTimer=setInterval(()=>{
+      if(!this.alive || !this.visible){this.stopAnimation();return}
+      frame=(frame+1)%frames.length;this.sprite=frames[frame]
+      if(Date.now()-start>(name==='idle'?6000:2400)){this.stopAnimation();this.sprite=this.currentProfile.animations.idle[0]}
+    },200)
+  },
+  act(action){
+    const app=this.$app.$def;if(!app.ready)return
+    const result=pet.interact(app.state,action,Date.now());app.state=result.state;this.refresh()
+    this.line=profiles.personalize(result.line,this.currentProfile);app.save();this.animate(result.animation)
+  },
+  petHead(){this.act('pet')},feed(){this.act('feed')},play(){this.act('play')},
+  foodInfo(){prompt.showToast({message:'饱食度 '+this.food})},moodInfo(){prompt.showToast({message:'心情 '+this.mood})},affinityInfo(){prompt.showToast({message:'亲密度 '+this.affinity})},
+  settings(){router.push({uri:'/Settings'})},openChat(){router.push({uri:'/Chat'})},
+  sceneError(){this.scene=builtin.scene},
+  spriteError(){
+    this.stopAnimation();this.sprite=builtin.animations.idle[0]
+    this.line='形象暂未加载，已显示内置角色。请到设置重新同步。'
+  }
+}
+</script>
+<style>
+.page {width:100%;height:100%;background-color:#142331;}
+.scene {width:100%;height:100%;object-fit:cover;}
+.shade {width:100%;height:100%;background-color:rgba(10,20,28,0.12);}
+.ui {width:100%;height:100%;padding:40px 26px 18px;flex-direction:column;}
+.stats {width:100%;height:42px;justify-content:space-between;}
+.stat {width:112px;height:42px;border-radius:21px;background-color:rgba(15,28,39,0.76);justify-content:center;align-items:center;}
+.stat-icon {width:26px;height:26px;margin-right:8px;object-fit:contain;}
+.value {font-size:24px;color:#fff4dd;width:48px;}
+.bubble {width:100%;height:60px;margin-top:8px;padding:6px 12px;background-color:rgba(15,28,39,0.80);border-radius:18px;color:#fff4dd;font-size:20px;max-lines:2;text-align:center;}
+.stage {flex:1;justify-content:center;align-items:flex-end;}
+.pet {width:266px;height:288px;object-fit:contain;}
+.toolbar {width:100%;height:64px;justify-content:space-between;align-items:center;}
+.action {width:64px;height:60px;border-radius:22px;background-color:rgba(15,28,39,0.84);justify-content:center;align-items:center;}
+.action-icon {width:34px;height:34px;object-fit:contain;}
+.minor {width:44px;height:52px;border-radius:18px;background-color:rgba(15,28,39,0.64);justify-content:center;align-items:center;}
+.minor-icon {width:26px;height:26px;object-fit:contain;}
+.error {height:32px;font-size:17px;color:#ffdfc8;max-lines:1;background-color:#263542;}
+</style>

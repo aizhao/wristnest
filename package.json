@@ -1,0 +1,17 @@
+{
+  "name": "watch-pet",
+  "private": true,
+  "version": "0.3.1",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "server": "node --env-file-if-exists=server/.env server/index.mjs",
+    "companion": "node --env-file-if-exists=server/.env companion/server.mjs",
+    "check:ai": "node --env-file-if-exists=server/.env scripts/check-ai.mjs"
+  },
+  "dependencies": {
+    "pngjs": "7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

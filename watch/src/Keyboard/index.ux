@@ -1,0 +1,54 @@
+<template>
+  <div class="page">
+    <div class="header"><text class="back" onclick="back">取消</text><text class="title">写给小伴</text><text class="done" onclick="done">完成</text></div>
+    <text class="draft">{{text || '逐字拼音输入，或切到 EN'}}{{composition ? ' [' + composition + ']' : ''}}</text>
+    <div class="candidates"><text class="candidate" for="{{candidateItems}}" onclick="choose($item)">{{$item.char}}</text><text class="next" onclick="nextCandidates">换一组</text></div>
+    <div class="keys" for="{{row in rows}}"><text class="key" for="{{key in row.keys}}" onclick="tap(key)">{{key}}</text></div>
+    <div class="controls"><text class="control" onclick="modeChange">{{mode}}</text><text class="control" onclick="symbols">123</text><text class="control" onclick="space">空格</text><text class="control" onclick="erase">退格</text></div>
+    <text class="hint">{{hint}}</text>
+  </div>
+</template>
+<script>
+import router from '@system.router'
+const dictionary=require('../lib/pinyin.json')
+const ime=require('../lib/ime')
+const alphabet=['qwertyuiop','asdfghjkl','zxcvbnm']
+const numbers=['1234567890','.,!?/:@_-','()+=#%&']
+export default {
+  private:{text:'',composition:'',mode:'拼音',rows:[],candidateItems:[],hint:'选择候选字后继续输入；最多 160 字。'},
+  onInit() { this.text=this.$app.$def.draft || ''; this.offset=0; this.refreshKeys() },
+  refreshKeys() { this.rows=(this.mode==='123'?numbers:alphabet).map(row=>({keys:row.split('')})); this.refreshCandidates() },
+  refreshCandidates() {
+    const result=ime.candidates(dictionary,this.composition,this.offset)
+    this.candidateItems=result.items;this.total=result.total
+    this.hint=this.composition && !result.total?'暂未找到，试试逐个音节输入（ü 用 v）。':'选择候选字后继续输入；最多 160 字。'
+  },
+  tap(key) {
+    if(this.mode==='拼音') {if(this.composition.length<24)this.composition+=key;this.offset=0;this.refreshCandidates()}
+    else if(this.text.length<160)this.text+=key
+  },
+  choose(item) { if(this.text.length>=160)return;this.text+=item.char;this.composition=this.composition.slice(item.syllable.length);this.offset=0;this.refreshCandidates() },
+  nextCandidates() { if(!this.total)return;this.offset=this.offset+5>=this.total?0:this.offset+5;this.refreshCandidates() },
+  modeChange() { this.mode=this.mode==='拼音'?'EN':'拼音';this.composition='';this.offset=0;this.refreshKeys() },
+  symbols() {this.mode=this.mode==='123'?'拼音':'123';this.composition='';this.offset=0;this.refreshKeys()},
+  space() { if(this.composition) {this.hint='先选候选字，或用退格修改拼音。';return}if(this.text.length<160)this.text+=' ' },
+  erase() { if(this.composition)this.composition=this.composition.slice(0,-1);else this.text=this.text.slice(0,-1);this.offset=0;this.refreshCandidates() },
+  done() { if(this.composition){this.hint='还有拼音没选字，请先选字或退格。';return}this.$app.$def.draft=this.text.trim();router.back() },
+  back() {router.back()}
+}
+</script>
+<style>
+.page {width:100%;height:100%;padding:42px 16px 16px;background-color:#10151f;flex-direction:column;}
+.header {height:44px;padding:0px 12px;justify-content:space-between;align-items:center;}
+.back,.done {font-size:22px;color:#accffc;height:44px;width:72px;text-align:center;}
+.title {font-size:25px;color:#f4f5f8;}
+.draft {width:100%;height:72px;font-size:23px;color:#f4f5f8;background-color:#202a39;border-radius:12px;padding:8px;max-lines:2;margin-top:6px;}
+.candidates {height:54px;align-items:center;justify-content:space-between;}
+.candidate {font-size:28px;color:#accffc;width:52px;height:52px;text-align:center;}
+.next {font-size:18px;color:#b5c4d8;width:76px;height:52px;text-align:center;}
+.keys {width:100%;height:52px;justify-content:center;}
+.key {flex:1;height:48px;margin:2px;border-radius:8px;background-color:#26354a;color:#f4f5f8;font-size:26px;text-align:center;}
+.controls {height:52px;justify-content:space-between;margin-top:4px;}
+.control {width:94px;height:48px;background-color:#26354a;color:#f4f5f8;font-size:21px;text-align:center;border-radius:10px;}
+.hint {font-size:17px;color:#b5c4d8;margin-top:6px;max-lines:2;}
+</style>

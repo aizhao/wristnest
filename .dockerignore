@@ -1,0 +1,10 @@
+**/node_modules
+**/sign
+**/build
+**/dist
+**/.env
+companion/data
+*.zip
+*.rpk
+preview-verified.png
+v0.2-*.png

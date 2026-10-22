@@ -1,0 +1,57 @@
+{
+  "package": "org.example.watchpet",
+  "name": "腕上小屋",
+  "versionName": "0.3.1",
+  "versionCode": 5,
+  "minPlatformVersion": 1200,
+  "icon": "/Common/icon.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "minAPILevel": 2,
+  "features": [
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.fetch"
+    },
+    {
+      "name": "system.request"
+    },
+    {
+      "name": "system.file"
+    },
+    {
+      "name": "system.prompt"
+    }
+  ],
+  "config": {
+    "designWidth": 432,
+    "logLevel": "error"
+  },
+  "router": {
+    "entry": "Home",
+    "pages": {
+      "Home": {
+        "component": "index"
+      },
+      "Chat": {
+        "component": "index",
+        "launchMode": "singleTask"
+      },
+      "Keyboard": {
+        "component": "index"
+      },
+      "Settings": {
+        "component": "index"
+      },
+      "ServiceAddress": {
+        "component": "index"
+      }
+    }
+  }
+}

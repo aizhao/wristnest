@@ -1,0 +1,69 @@
+<script>
+import storage from '@system.storage'
+const pet = require('./lib/pet')
+const profiles = require('./lib/profile')
+const builtin = require('./profile.json')
+const syncConfig = require('./sync-config')
+
+export default {
+  state: null,
+  history: [],
+  customProfile: null,
+  previousProfile: null,
+  sync: null,
+  addressDraft: '',
+  draft: '',
+  ready: false,
+  saveError: false,
+  writing: false,
+  queued: null,
+  queuedCallbacks: [],
+  waiters: [],
+  onCreate() {
+    this.state = pet.createPet(Date.now())
+    this.sync={baseUrl:syncConfig.baseUrl || '',id:'',deviceToken:'',editorToken:''}
+    storage.get({
+      key: 'watchpet.save.v1',
+      success: raw => {
+        try {
+          const saved = JSON.parse(raw)
+          this.state = pet.advance(saved.state, Date.now())
+          this.customProfile=saved.customProfile || null
+          this.previousProfile=saved.previousProfile || null
+          if(saved.sync && typeof saved.sync.baseUrl==='string')this.sync=saved.sync
+          this.history = Array.isArray(saved.history) ? saved.history.filter(x => x && ['user','assistant'].indexOf(x.role) >= 0 && typeof x.content === 'string').slice(-12).map(x => ({role: x.role, content: x.content.slice(0,240)})) : []
+        } catch (e) {}
+        this.finishLoad()
+      },
+      fail: () => this.finishLoad()
+    })
+  },
+  finishLoad() {
+    this.ready = true
+    this.waiters.splice(0).forEach(callback => callback())
+  },
+  whenReady(callback) {
+    if (this.ready) callback()
+    else this.waiters.push(callback)
+  },
+  profile() { return profiles.activeProfile(builtin,this.customProfile) },
+  save(callback) {
+    if (!this.ready) {if(callback)callback(false);return}
+    if(callback)this.queuedCallbacks.push(callback)
+    this.queued = JSON.stringify({state:this.state, history:this.history,customProfile:this.customProfile,previousProfile:this.previousProfile,sync:this.sync})
+    this.flush()
+  },
+  flush() {
+    if (this.writing || this.queued === null) return
+    const value = this.queued
+    const callbacks=this.queuedCallbacks.splice(0)
+    this.queued = null
+    this.writing = true
+    storage.set({key:'watchpet.save.v1', value,
+      success: () => { this.saveError = false;callbacks.forEach(callback=>callback(true)) },
+      fail: () => { this.saveError = true;callbacks.forEach(callback=>callback(false)) },
+      complete: () => { this.writing = false; this.flush() }
+    })
+  }
+}
+</script>

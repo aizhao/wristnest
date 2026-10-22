@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>腕上小屋 · 自定义</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<main class="shell">
+<header class="app-header"><div class="brand"><img src="/icons/heart.png" alt=""><span>腕上小屋</span></div><span id="connection" class="connection">预览模式</span></header>
+<div class="layout">
+<section class="preview-section" aria-label="手表预览">
+  <div class="watch" id="watch">
+    <img class="scene" id="scene" alt="小屋背景">
+    <div class="watch-shade"></div>
+    <div class="watch-ui">
+      <div class="stats"><button data-status="饱食度 65"><img src="/icons/food.png" alt="饱食度"><span>65</span></button><button data-status="心情 72"><img src="/icons/mood.png" alt="心情"><span>72</span></button><button data-status="亲密度 36"><img src="/icons/heart.png" alt="亲密度"><span>36</span></button></div>
+      <div class="speech" id="speech" role="status" aria-live="polite"></div>
+      <button class="pet-stage" id="pet-stage" aria-label="摸摸角色"><img id="pet" alt="角色形象"></button>
+      <div class="toolbar"><button class="minor" id="preview-settings" aria-label="打开自定义设置"><img src="/icons/settings.png" alt=""></button><button class="action" data-action="waving" aria-label="摸摸"><img src="/icons/pet.png" alt=""></button><button class="action" data-action="review" aria-label="喂食"><img src="/icons/feed.png" alt=""></button><button class="action" data-action="jumping" aria-label="陪玩"><img src="/icons/play.png" alt=""></button><button class="minor" id="preview-chat" aria-label="聊天入口"><img src="/icons/chat.png" alt=""></button></div>
+    </div>
+  </div>
+  <div class="preview-caption"><span id="pet-name">小伴</span><span>首页预览 · 可点击互动</span></div>
+</section>
+<section class="editor" id="editor" aria-label="自定义角色">
+  <div class="editor-heading"><div><p class="eyebrow">让小屋变成你的样子</p><h1>给陪伴换个模样</h1></div></div>
+  <p class="intro" id="intro">在手表设置里创建配对，手机扫码后就能保存修改。</p>
+  <div class="fields"><label>角色名字<input id="name" maxlength="12" placeholder="给它起个名字" autocomplete="off"></label><label>它怎么称呼你<input id="nickname" maxlength="12" placeholder="你的昵称" autocomplete="off"></label></div>
+  <p class="field-note">名字与称呼用于小屋和互动，聊天页面本轮保持原样。</p>
+  <fieldset><legend>角色形象</legend><p class="field-note">先用一张图片就能开始。透明背景 PNG 最自然。</p><label class="upload"><img src="/icons/pet.png" alt=""><span><strong>选择角色图片</strong><small>PNG / JPG / WebP · 图片在手机上处理</small></span><input id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp"></label><p class="selection" id="avatar-label">使用内置角色</p>
+  <details><summary>我有完整动作图集</summary><p class="field-note">支持 8 列 × 11 行的标准图集。只传单张形象时不会自动生成动作。</p><label class="upload small-upload"><span>选择动作图集</span><input id="atlas-file" type="file" accept="image/png"></label><a href="/template.png" download="watch-pet-atlas-template.png">下载示例动作图集</a></details></fieldset>
+  <fieldset><legend>小屋场景</legend><div class="scene-options"><button type="button" id="builtin-scene" class="selected">温暖小屋</button><label class="upload scene-upload"><span>上传我的背景</span><input id="scene-file" type="file" accept="image/png,image/jpeg,image/webp"></label></div><p class="selection" id="scene-label">使用内置场景</p></fieldset>
+  <button type="button" class="save" id="save">保存，等待手表同步</button>
+  <p class="save-status" id="save-status" role="status" aria-live="polite">预览不会修改手表。请先扫描手表上的配对码。</p>
+  <p class="privacy-note">图片会保存到你连接的配套服务。手表停留在自定义页时自动检查修改，也可点“同步手机修改”。</p>
+</section>
+</div>
+</main>
+</body></html>

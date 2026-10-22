@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "小伴",
+  "nickname": "朋友",
+  "scene": "/Common/scenes/room.png",
+  "animations": {
+    "idle": [
+      "/Common/idle/00.png",
+      "/Common/idle/01.png",
+      "/Common/idle/02.png",
+      "/Common/idle/03.png"
+    ],
+    "waving": [
+      "/Common/waving/00.png",
+      "/Common/waving/01.png",
+      "/Common/waving/02.png",
+      "/Common/waving/03.png"
+    ],
+    "jumping": [
+      "/Common/jumping/00.png",
+      "/Common/jumping/01.png",
+      "/Common/jumping/02.png",
+      "/Common/jumping/03.png"
+    ],
+    "waiting": [
+      "/Common/waiting/00.png",
+      "/Common/waiting/01.png",
+      "/Common/waiting/02.png",
+      "/Common/waiting/03.png"
+    ],
+    "review": [
+      "/Common/review/00.png",
+      "/Common/review/01.png",
+      "/Common/review/02.png",
+      "/Common/review/03.png"
+    ]
+  }
+}
