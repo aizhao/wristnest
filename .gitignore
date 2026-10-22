@@ -130,6 +130,62 @@ venv/
 *~
 
 # Editor and operating-system files
+# Local AI coding assistants, MCP settings and emulator configuration
+.codex/
+.agents/
+.claude/
+.cursor/
+.continue/
+.windsurf/
+.trae/
+.qoder/
+.gemini/
+.opencode/
+.roo/
+.kilocode/
+.aider*
+.cursorrules
+.cursorignore
+.windsurfrules
+.clinerules
+.clinerules/
+.mcp.json
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+CODEX.md
+.devcontainer/
+.vscode-test/
+.vs/
+.history/
+.local/
+.vela/
+.aiot/
+.emulator/
+
+# Personal development notes and one-off tooling
+/AI_SETUP.md
+/ROADMAP.md
+/OPEN_SOURCE_PLAN.md
+/PUBLIC_README.md
+/PHONE_CUSTOMIZATION.md
+/LICENSE.proposed
+/DEV_NOTES.md
+/DEVELOPMENT_NOTES.md
+/PLAN.md
+/TASKS.md
+/TODO.local.md
+/notes/
+/plans/
+/reports/
+/dev-tools/
+/local-tools/
+/scratch/
+/debug/
+/debug-output/
+/scripts/prepare-public.mjs
+
+# Shared source, build scripts and tests remain tracked.
 .idea/
 .vscode/
 *.iml
